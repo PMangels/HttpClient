@@ -8,20 +8,29 @@ import java.net.*;
  */
 public class TCPClient
 {
-    public static void main(String argv[]) throws Exception
-    {
-        BufferedReader inFromUser = new BufferedReader( new
-                InputStreamReader(System.in));
-        Socket clientSocket = new Socket("localhost", 6789);
-        DataOutputStream outToServer = new DataOutputStream
-                (clientSocket.getOutputStream());
-        BufferedReader inFromServer = new BufferedReader(new
-                InputStreamReader(clientSocket.getInputStream()));
-        String sentence = inFromUser.readLine();
-        outToServer.writeBytes(sentence + '\n');
-        String modifiedSentence = inFromServer.readLine();
-        System.out.println("FROM SERVER: " + modifiedSentence);
-        clientSocket.close();
+    public static void main(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException {
+        if (args.length != 3)
+            throw new IllegalArgumentException();
+
+        RequestType type;
+        try {
+            type = RequestType.valueOf(args[0]);
+        }catch (IllegalArgumentException e){
+            throw new UnsupportedHTTPCommandException();
+        }
+
+        String rawUri = args[1];
+        if (!rawUri.startsWith("http://"))
+            rawUri = "http://" + rawUri;
+
+        URI uri = new URI(rawUri);
+
+        int port = Integer.parseInt(args[2]);
+
+        Connection connection = new Connection(uri.getHost(), port);
+        Request request = new Request(type, uri.getPath());
+
+        System.out.println(connection.sendRequest(request));
     }
 }
 
