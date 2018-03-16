@@ -8,6 +8,10 @@ public class Connection {
     private final String host;
     private final int port;
 
+    public String getHost() {
+        return host;
+    }
+
     public Connection(String host, int port) throws IOException {
         this.host = host;
         this.port = port;
@@ -19,6 +23,7 @@ public class Connection {
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         outputStream.writeBytes(request.requestString() + "Host: " + this.host + ":" + this.port + "\r\n\r\n");
 
+        //TODO: Check whether this needs to be an ImageBuffer or a StringBuilder.
         StringBuilder responseBuffer = new StringBuilder();
 
         while (true) {
