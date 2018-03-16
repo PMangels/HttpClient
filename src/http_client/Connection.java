@@ -1,9 +1,6 @@
 package http_client;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Socket;
 
 public class Connection {
@@ -17,28 +14,34 @@ public class Connection {
         this.socket = new Socket(host, port);
     }
 
-    public Response sendRequest(Request request) throws IOException {
+    public Response sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-        BufferedReader inputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        outputStream.writeBytes(request.requestString() + "Host: " + this.host + ":" + this.port + "\n\n");
-        StringBuffer responseBuffer = new StringBuffer();
-        String line = inputStream.readLine();
-        responseBuffer.append(line + "\n");
-        String lastLine = "";
+        DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+        outputStream.writeBytes(request.requestString() + "Host: " + this.host + ":" + this.port + "\r\n\r\n");
+
+        StringBuilder responseBuffer = new StringBuilder();
+
+        while (true) {
+            responseBuffer.append((char)inputStream.readByte());
+            if (responseBuffer.toString().endsWith("\r\n\r\n")){
+                break;
+            }
+        }
+
         int length = 0;
-        while (!(line.isEmpty() && lastLine.isEmpty())) {
-            line = inputStream.readLine();
-            responseBuffer.append(line + "\n");
-            if (line.startsWith("Content-Length:"))
+        for(String line: responseBuffer.toString().split("\r\n")) {
+            if (line.startsWith("Content-Length: ")){
                 length = Integer.parseInt(line.substring(16));
-            lastLine = line;
+                break;
+            }
         }
-        int bytesRead = 0;
-        while (bytesRead != length){
-            line = inputStream.readLine();
-            responseBuffer.append(line + "\n");
-            bytesRead += line.length() + 1;
+        int byteCount = 0;
+        byte[] bytes = new byte[length];
+        while (byteCount != length) {
+            byteCount += inputStream.read(bytes, byteCount, length-byteCount);
         }
+        responseBuffer.append(new String(bytes, "UTF-8"));
+
 
         return new Response(responseBuffer.toString());
     }

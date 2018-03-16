@@ -14,14 +14,15 @@ public class Request {
     }
 
     public Request(RequestType type, String path) {
+        //TODO: post and put requests should be able to send data to the server. Also add headers
         this.type = type;
-        if (path.isEmpty())
-            path = "/";
+        if (!path.startsWith("/"))
+            path = "/" + path;
 
         this.path = path;
     }
 
     public String requestString() {
-        return getType().getTypeString() + " " + getPath() + " " + "HTTP/1.1\n";
+        return getType().getTypeString() + " " + getPath() + " " + "HTTP/1.1\r\n";
     }
 }
