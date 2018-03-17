@@ -1,13 +1,9 @@
 package http_client;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
 import java.util.List;
-
 import static java.util.Base64.*;
 
 public class Connection {
