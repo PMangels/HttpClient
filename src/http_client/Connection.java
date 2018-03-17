@@ -29,11 +29,18 @@ public class Connection {
         StringBuilder responseBuffer = new StringBuilder();
 
         //TODO: I think this needs to be a try catch statement that will make a new socket and send the request again if necessary.
-        while (true) {
-            responseBuffer.append((char)inputStream.readByte());
-            if (responseBuffer.toString().endsWith("\r\n\r\n")){
-                break;
+        try{
+            while (true) {
+                responseBuffer.append((char)inputStream.readByte());
+                if (responseBuffer.toString().endsWith("\r\n\r\n")){
+                    break;
+                }
             }
+        } catch (java.io.EOFException e){
+            System.out.println(e.getClass().getCanonicalName()+"------------------------------------------------------");
+            return new Response("HTTP/1.1 200 Ok\r\n" +
+                    "Content-Length: 0\r\n"+
+                    "\r\n");
         }
 
         int length = 0;
