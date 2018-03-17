@@ -28,6 +28,7 @@ public class Connection {
 
         StringBuilder responseBuffer = new StringBuilder();
 
+
         try{
             while (true) {
                 responseBuffer.append((char) inputStream.readByte());
