@@ -86,7 +86,7 @@ public class TCPClient
                 resource_connection = new Connection(resource_host,80);
                 connections.add(resource_connection);
             }
-            response = connection.sendRequest(req);
+            response = resource_connection.sendRequest(req);
         }
         List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
         String extension;
@@ -111,7 +111,7 @@ public class TCPClient
                 e.printStackTrace();
             }
             //Todo: can't decode some files although other files with same extension do work
-            if (bufferedImage == null){
+            if (bufferedImage == null){ // Shouldn't happen but there are some files that the ImageIO.read doesn't always work.
                 try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file))) {
                     System.out.println("Couldn't decode file: Wrote dummy file to: "+filename);
                     bufferedWriter.write("");
