@@ -28,7 +28,6 @@ public class Connection {
 
         StringBuilder responseBuffer = new StringBuilder();
 
-        //TODO: I think this needs to be a try catch statement that will make a new socket and send the request again if necessary.
         try{
             while (true) {
                 responseBuffer.append((char) inputStream.readByte());
