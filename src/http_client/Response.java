@@ -14,7 +14,12 @@ public class Response {
     }
 
     private final Map<String, String> headers = new HashMap<>();
-    private final String content;
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    private String content;
     private final int statusCode;
 
     public int getStatusCode() {
