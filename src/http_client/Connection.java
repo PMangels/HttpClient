@@ -21,7 +21,7 @@ public class Connection {
         this.socket = new Socket(host, port);
     }
 
-    public Response sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException {
+    public ConnectionResponse sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         outputStream.writeBytes(request.requestString() + "Host: " + this.host + ":" + this.port + "\r\n\r\n");
@@ -29,25 +29,33 @@ public class Connection {
         StringBuilder responseBuffer = new StringBuilder();
 
         //TODO: I think this needs to be a try catch statement that will make a new socket and send the request again if necessary.
-        while (true) {
-            responseBuffer.append((char)inputStream.readByte());
-            if (responseBuffer.toString().endsWith("\r\n\r\n")){
-                break;
+        try{
+            while (true) {
+                responseBuffer.append((char) inputStream.readByte());
+                if (responseBuffer.toString().endsWith("\r\n\r\n")) {
+                    break;
+                }
             }
+        } catch (java.io.EOFException e){
+            System.out.println("Socket died, reconnecting.");
+            Connection new_connection = new Connection(host, port);
+            return new_connection.sendRequest(request);
         }
 
         int length = 0;
-        for(String line: responseBuffer.toString().split("\r\n")) {
-            if (line.startsWith("Content-Length: ")){
+        for (String line : responseBuffer.toString().split("\r\n")) {
+            if (line.startsWith("Content-Length: ")) {
                 length = Integer.parseInt(line.substring(16));
                 break;
             }
         }
 
+
+
         int byteCount = 0;
         byte[] bytes = new byte[length];
         while (byteCount != length) {
-            byteCount += inputStream.read(bytes, byteCount, length-byteCount);
+            byteCount += inputStream.read(bytes, byteCount, length - byteCount);
         }
 
         List<String> imageExtensions = Arrays.asList("jpeg", "jpg", "png", "bmp", "wbmp", "gif");
@@ -70,7 +78,7 @@ public class Connection {
         responseBuffer.append(byteString);
 
 
-        return new Response(responseBuffer.toString());
+        return new ConnectionResponse(new Response(responseBuffer.toString()),this);
     }
 
 }
