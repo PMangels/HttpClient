@@ -1,7 +1,7 @@
 package http_client;
 
 
-import java.util.HashMap;
+import  java.util.HashMap;
 import java.util.Map;
 
 public class Response {

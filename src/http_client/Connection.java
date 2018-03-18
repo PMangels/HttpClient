@@ -37,6 +37,7 @@ public class Connection {
                 }
             }
         } catch (java.io.EOFException e){
+            //reconnect to website that disconnected.
             System.out.println("Socket died, reconnecting.");
             Connection new_connection = new Connection(host, port);
             return new_connection.sendRequest(request);
@@ -58,6 +59,7 @@ public class Connection {
             byteCount += inputStream.read(bytes, byteCount, length - byteCount);
         }
 
+        //TODO: We could check for content-type...
         List<String> imageExtensions = Arrays.asList("jpeg", "jpg", "png", "bmp", "wbmp", "gif");
         String byteString;
         String extension;
