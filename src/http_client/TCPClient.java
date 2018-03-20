@@ -43,6 +43,10 @@ public class TCPClient
         Elements elements = parsedHtml.getElementsByAttribute("src");
         ArrayList<Connection> connections = new ArrayList<>();
         String absolutePath = System.getProperty("user.dir") + "/Files/";
+        File directory = new File (absolutePath);
+        if (!directory.exists()){
+            directory.mkdir();
+        }
         for (Element element: elements){
             ConnectionResponse response;
             URI uriElement = new URI(element.attr("src"));
