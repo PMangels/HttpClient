@@ -44,10 +44,15 @@ public class Connection {
         }
 
         int length = 0;
+        HttpContentType type = HttpContentType.UNDEFINED;
         for (String line : responseBuffer.toString().split("\r\n")) {
             if (line.startsWith("Content-Length: ")) {
                 length = Integer.parseInt(line.substring(16));
-                break;
+            }
+            if (line.startsWith("Content-Type: ")){
+                if(line.contains("image")){
+                    type = HttpContentType.IMAGE;
+                }
             }
         }
 
@@ -71,7 +76,7 @@ public class Connection {
         } catch (IndexOutOfBoundsException e) {
             extension = "";
         }
-        if (imageExtensions.contains(extension)){
+        if (imageExtensions.contains(extension)||type.equals(HttpContentType.IMAGE)){
             byteString = new String(getEncoder().encode(bytes),"UTF-8");
         }
         else{
