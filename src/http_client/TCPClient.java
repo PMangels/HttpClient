@@ -42,6 +42,10 @@ public class TCPClient
 
         Document parsedHtml = Jsoup.parse(result.response.getContent());
         Elements elements = parsedHtml.getElementsByAttribute("src");
+        Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel","stylesheet");
+        for (Element cssStyleSheet:cssStyleSheets){
+            elements.add(cssStyleSheet);
+        }
         ArrayList<Connection> connections = new ArrayList<>();
         String absolutePath = System.getProperty("user.dir") + "/Files/";
         File directory = new File (absolutePath);
@@ -50,7 +54,12 @@ public class TCPClient
         }
         for (Element element: elements){
             ConnectionResponse response;
-            URI uriElement = new URI(element.attr("src"));
+            URI uriElement;
+            if (element.attr("rel").equals("stylesheet")){
+                uriElement = new URI(element.attr("href"));
+            } else {
+                uriElement = new URI(element.attr("src"));
+            }
             String filename;
             try {
                 String[] pathSplit = uriElement.getPath().split("/");
@@ -86,15 +95,36 @@ public class TCPClient
             }
             List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
             String extension;
-            try {
-                String[] filenameSplit = filename.split("\\.");
-                extension = filenameSplit[filenameSplit.length - 1].toLowerCase();
-            } catch (IndexOutOfBoundsException e){
+            if (filename.contains(".")){
+                try {
+                    String[] filenameSplit = filename.split("\\.");
+                    extension = filenameSplit[filenameSplit.length - 1].toLowerCase();
+                } catch (IndexOutOfBoundsException e){
+                    extension = "";
+                }
+            } else {
                 extension = "";
             }
-            File file = new File(absolutePath +filename);
-            if (!file.createNewFile()){
-                System.out.println("Overwriting file: "+filename);
+            int length_extension;
+            if (extension.length()==0){
+                length_extension = 0;
+            } else{
+                length_extension = (extension.length()+1);
+            }
+            String saveName = filename.substring(0,filename.length()-length_extension);
+            File file;
+            if (extension.length()!=0)
+                file = new File(absolutePath +saveName+"."+extension);
+            else
+                file = new File(absolutePath+saveName);
+            int version = 1;
+            while (!file.createNewFile()){
+                saveName = filename.substring(0,filename.length()-length_extension).concat("_"+version);
+                if (extension.length()!=0)
+                    file = new File(absolutePath +saveName+"."+extension);
+                else
+                    file = new File(absolutePath+saveName);
+                version+=1;
             }
             if (imageExtensions.contains(extension)){
                 byte[] byteString = getDecoder().decode(response.response.getContent().getBytes(StandardCharsets.UTF_8));
@@ -109,7 +139,11 @@ public class TCPClient
                 //Todo: can't decode some files although other files with same extension do work
                 if (bufferedImage == null){ // Shouldn't happen but there are some files that the ImageIO.read doesn't always work.
                     try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file))) {
-                        System.out.println("Couldn't decode file: Wrote dummy file to: "+filename);
+                        if (extension.length()!=0)
+                            System.out.println("Couldn't decode file: Wrote dummy file to: "+saveName+"."+extension);
+                        else
+                            System.out.println("Couldn't decode file: Wrote dummy file to: "+saveName);
+
                         bufferedWriter.write("");
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -129,8 +163,23 @@ public class TCPClient
                     e.printStackTrace();
                 }
             }
-            element.attr("src",filename);
-            System.out.println("Wrote resource to file: "+filename);
+            if (element.attr("rel").equals("stylesheet")){
+                if (extension.length()!=0) {
+                    element.attr("href", saveName + "." + extension);
+                    System.out.println("Wrote resource to file: " + saveName + "." + extension);
+                }else {
+                    element.attr("href", saveName);
+                    System.out.println("Wrote resource to file: " + saveName);
+                }            }
+            else{
+                if (extension.length()!=0) {
+                    element.attr("src", saveName + "." + extension);
+                    System.out.println("Wrote resource to file: " + saveName + "." + extension);
+                }else {
+                    element.attr("src", saveName);
+                    System.out.println("Wrote resource to file: " + saveName);
+                }
+            }
         }
         result.response.setContent(parsedHtml.toString());
         writeHtmlToFile(result.response, absolutePath);
