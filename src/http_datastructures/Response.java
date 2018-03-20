@@ -13,10 +13,13 @@ public class Response extends HTTPMessage {
         return status;
     }
 
-    public Response(String rawResponse) throws UnsupportedHTTPVersionException {
+    public Response(String rawResponse) throws UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
         super(rawResponse);
 
         String[] firstLine = this.firstLine.split(" ", 3);
+        if (firstLine.length < 3){
+            throw new IllegalResponseException();
+        }
 
         switch (firstLine[0]){
             case "HTTP/1.1":
