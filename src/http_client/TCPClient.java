@@ -17,7 +17,6 @@ import static java.util.Base64.*;
 public class TCPClient
 {
     public static void main(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException, UnsupportedHTTPVersionException {
-        //TODO: figure out how to run from commandline.
         if (args.length != 3)
             throw new IllegalArgumentException();
 
@@ -139,6 +138,7 @@ public class TCPClient
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println();
         System.out.println(result.getContent());
     }
 
