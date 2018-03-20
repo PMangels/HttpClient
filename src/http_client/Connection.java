@@ -64,7 +64,6 @@ public class Connection {
             byteCount += inputStream.read(bytes, byteCount, length - byteCount);
         }
 
-        //TODO: We could check for content-type...
         List<String> imageExtensions = Arrays.asList("jpeg", "jpg", "png", "bmp", "wbmp", "gif");
         String byteString;
         String extension;
