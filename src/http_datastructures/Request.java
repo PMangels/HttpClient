@@ -23,9 +23,12 @@ public class Request extends HTTPMessage {
         this.path = path;
     }
 
-    public Request(String requestString) throws UnsupportedHTTPCommandException, UnsupportedHTTPVersionException {
+    public Request(String requestString) throws UnsupportedHTTPCommandException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalRequestException {
         super(requestString);
         String[] firstLine = this.firstLine.split(" ");
+        if (firstLine.length < 3){
+            throw new IllegalRequestException();
+        }
         try {
             this.type = RequestType.valueOf(firstLine[0]);
         }catch (IllegalArgumentException e){

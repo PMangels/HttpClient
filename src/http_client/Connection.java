@@ -23,7 +23,7 @@ public class Connection {
         this.socket = new Socket(host, port);
     }
 
-    public ConnectionResponse sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException {
+    public ConnectionResponse sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         request.addHeader("Host", this.host + ":" + this.port);

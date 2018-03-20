@@ -21,6 +21,10 @@ public class HTTPMessage {
    public void addHeader(String key, String value){
         this.headers.put(key, value);
    }
+
+   public String getHeader(String key){
+        return this.headers.get(key.toLowerCase());
+   }
    
    public String headerString(){
         StringBuilder output = new StringBuilder();
@@ -42,7 +46,7 @@ public class HTTPMessage {
         this.content = content;
     }
 
-    public HTTPMessage(String rawMessage) throws IllegalHeaderException{
+    public HTTPMessage(String rawMessage) throws IllegalHeaderException {
         String[] parts = rawMessage.split("\r\n\r\n", 2);
         if (parts.length == 2){
             this.content = parts[1];
@@ -57,7 +61,7 @@ public class HTTPMessage {
                 if (lineParts.length == 1){
                     throw new IllegalHeaderException(line);
                 }
-                headers.put(lineParts[0], lineParts[1]);
+                headers.put(lineParts[0].toLowerCase(), lineParts[1]);
             }
         }
     }
