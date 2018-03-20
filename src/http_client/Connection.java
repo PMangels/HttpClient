@@ -26,7 +26,8 @@ public class Connection {
     public ConnectionResponse sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-        outputStream.writeBytes(request.toString() + "Host: " + this.host + ":" + this.port + "\r\n\r\n");
+        request.addHeader("Host", this.host + ":" + this.port);
+        outputStream.writeBytes(request.toString());
 
         StringBuilder responseBuffer = new StringBuilder();
 

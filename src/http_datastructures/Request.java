@@ -34,10 +34,15 @@ public class Request extends HTTPMessage {
 
         this.path = firstLine[1];
 
-        try {
-            this.version = HTTPVersion.valueOf(firstLine[2]);
-        }catch (IllegalArgumentException e){
-            throw new UnsupportedHTTPVersionException();
+        switch (firstLine[2]){
+            case "HTTP/1.1":
+                this.version = HTTPVersion.HTTP11;
+                break;
+            case "HTTP/1.0":
+                this.version = HTTPVersion.HTTP10;
+                break;
+            default:
+                throw new UnsupportedHTTPVersionException();
         }
 
     }

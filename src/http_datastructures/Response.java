@@ -18,10 +18,15 @@ public class Response extends HTTPMessage {
 
         String[] firstLine = this.firstLine.split(" ", 3);
 
-        try {
-            this.version = HTTPVersion.valueOf(firstLine[0]);
-        }catch (IllegalArgumentException e){
-            throw new UnsupportedHTTPVersionException();
+        switch (firstLine[0]){
+            case "HTTP/1.1":
+                this.version = HTTPVersion.HTTP11;
+                break;
+            case "HTTP/1.0":
+                this.version = HTTPVersion.HTTP10;
+                break;
+            default:
+                throw new UnsupportedHTTPVersionException();
         }
 
         this.statusCode = Integer.parseInt(firstLine[1]);
