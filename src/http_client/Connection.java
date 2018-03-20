@@ -1,5 +1,7 @@
 package http_client;
 
+import http_datastructures.*;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
@@ -24,7 +26,7 @@ public class Connection {
     public ConnectionResponse sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-        outputStream.writeBytes(request.requestString() + "Host: " + this.host + ":" + this.port + "\r\n\r\n");
+        outputStream.writeBytes(request.toString() + "Host: " + this.host + ":" + this.port + "\r\n\r\n");
 
         StringBuilder responseBuffer = new StringBuilder();
 

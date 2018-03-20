@@ -1,5 +1,7 @@
 package http_client;
 
+import http_datastructures.Response;
+
 public class ConnectionResponse {
     public final Response response;
     public final Connection connection;

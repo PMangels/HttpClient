@@ -1,11 +1,11 @@
-package http_client;
+package http_datastructures;
 
-public enum RequestType{
-    GET("GET"), POST("POST"), HEAD("HEAD"), PUT("PUT");
+public enum HttpContentType {
+    UNDEFINED("Undefined"), IMAGE("Image");
 
     private String typeString;
 
-    RequestType(String typeString) {
+    HttpContentType(String typeString) {
         this.typeString = typeString;
     }
 

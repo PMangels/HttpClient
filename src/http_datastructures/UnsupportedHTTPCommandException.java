@@ -1,4 +1,4 @@
-package http_client;
+package http_datastructures;
 
 public class UnsupportedHTTPCommandException extends Throwable {
 }

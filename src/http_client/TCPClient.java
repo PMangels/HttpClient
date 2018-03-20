@@ -11,6 +11,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import http_datastructures.*;
 
 import static java.util.Base64.*;
 
@@ -36,7 +37,7 @@ public class TCPClient
         int port = Integer.parseInt(args[2]);
 
         Connection connection = new Connection(uri.getHost(), port);
-        Request request = new Request(type, uri.getPath());
+        Request request = new Request(type, uri.getPath(), HTTPVersion.HTTP11, "");
         ConnectionResponse result = connection.sendRequest(request);
 
         Document parsedHtml = Jsoup.parse(result.response.getContent());
@@ -57,7 +58,7 @@ public class TCPClient
             } catch (IndexOutOfBoundsException e){
                 filename = uriElement.getPath();
             }
-            Request req = new Request(RequestType.GET, uriElement.getPath());
+            Request req = new Request(RequestType.GET, uriElement.getPath(), HTTPVersion.HTTP11, "");
             String resource_host = uriElement.getHost();
             if (resource_host == null || resource_host.equals(connection.getHost())) {
                 response = connection.sendRequest(req);
