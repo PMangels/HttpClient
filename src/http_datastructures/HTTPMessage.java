@@ -42,18 +42,24 @@ public class HTTPMessage {
         this.content = content;
     }
 
-    public HTTPMessage(String rawMessage){
+    public HTTPMessage(String rawMessage) throws IllegalHeaderException{
         String[] parts = rawMessage.split("\r\n\r\n", 2);
-
-        String[] headerParts = parts[0].split("\r\n", 2);
-
-        for (String line: headerParts[1].split("\r\n")) {
-            String[] lineParts = line.split(":", 2);
-            headers.put(lineParts[0], lineParts[1]);
+        if (parts.length == 2){
+            this.content = parts[1];
         }
 
-        this.content = parts[1];
+        String[] headerParts = parts[0].split("\r\n", 2);
         this.firstLine = headerParts[0];
+
+        if (headerParts.length > 1) {
+            for (String line : headerParts[1].split("\r\n")) {
+                String[] lineParts = line.split(":", 2);
+                if (lineParts.length == 1){
+                    throw new IllegalHeaderException(line);
+                }
+                headers.put(lineParts[0], lineParts[1]);
+            }
+        }
     }
 
     @Override
