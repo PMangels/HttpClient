@@ -174,6 +174,7 @@ public class TCPClient
         }
         result.setContent(parsedHtml.toString());
         writeHtmlToFile(result, absolutePath);
+        //TODO: close all connections
     }
 
     public static void writeHtmlToFile(Response result, String absolutePath) {

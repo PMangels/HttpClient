@@ -40,10 +40,14 @@ public class Connection {
             inputStream = new DataInputStream(socket.getInputStream());
             outputStream.writeBytes(request.toString());
         }
-
-        while (!responseBuffer.toString().endsWith("\r\n\r\n")) {
-            responseBuffer.append((char) inputStream.readByte());
-        }
+        do {
+            int index = responseBuffer.indexOf("\r\n\r\n");
+            if (index != -1)
+                responseBuffer.delete(0, index);
+            while (!responseBuffer.toString().endsWith("\r\n\r\n")) {
+                responseBuffer.append((char) inputStream.readByte());
+            }
+        } while (responseBuffer.toString().endsWith("100 Continue\r\n\r\n"));
 
         int length = 0;
         HttpContentType type = HttpContentType.UNDEFINED;
