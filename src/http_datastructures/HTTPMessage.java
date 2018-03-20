@@ -56,12 +56,17 @@ public class HTTPMessage {
         this.firstLine = headerParts[0];
 
         if (headerParts.length > 1) {
+            String lastHeader = "";
             for (String line : headerParts[1].split("\r\n")) {
                 String[] lineParts = line.split(":", 2);
                 if (lineParts.length == 1){
-                    throw new IllegalHeaderException(line);
+                    if (headers.size() == 0)
+                        throw new IllegalHeaderException(line);
+
+                    headers.put(lastHeader, headers.get(lastHeader) + lineParts[0].trim());
                 }
-                headers.put(lineParts[0].toLowerCase(), lineParts[1]);
+                lastHeader = lineParts[1].trim();
+                headers.put(lineParts[0].toLowerCase(), lastHeader);
             }
         }
     }
