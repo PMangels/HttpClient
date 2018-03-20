@@ -49,11 +49,11 @@ public class Connection {
         int length = 0;
         HttpContentType type = HttpContentType.UNDEFINED;
         for (String line : responseBuffer.toString().split("\r\n")) {
-            if (line.startsWith("Content-Length: ")) {
+            if (line.toLowerCase().startsWith("content-length: ")) {
                 length = Integer.parseInt(line.substring(16));
             }
-            if (line.startsWith("Content-Type: ")){
-                if(line.contains("image")){
+            if (line.toLowerCase().startsWith("content-type: ")){
+                if(line.toLowerCase().contains("image")){
                     type = HttpContentType.IMAGE;
                 }
             }
