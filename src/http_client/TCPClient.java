@@ -14,7 +14,6 @@ import java.util.*;
 import http_datastructures.*;
 
 import static java.util.Base64.*;
-//TODO: handle 303 redirect
 public class TCPClient
 {
     private static List<Connection> connections = new ArrayList<>();
@@ -25,39 +24,21 @@ public class TCPClient
 
     private static final List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
 
+    //TODO: handle chunckes
     public static void main(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
         try {
             Request request = parseRequest(args);
             Response result = connections.get(0).sendRequest(request);
 
+            if (303 == result.getStatusCode()){
+                result = handleRedirect(request,result);
+            }
             if (request.getType() != RequestType.HEAD) {
                 if ("text/html".equals(result.getHeader("content-type"))) {
-                    Document parsedHtml = Jsoup.parse(result.getContent());
-                    Elements elements = parsedHtml.getElementsByAttribute("src");
-                    Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
-                    elements.addAll(cssStyleSheets);
-
-                    File directory = new File(absolutePath);
-                    if (!directory.exists()) {
-                        directory.mkdir();
-                    }
-
-                    for (Element element : elements) {
-                        fetchElement(element);
-                    }
-
-                    result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
-
-                    try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "webpage.html"))) {
-                        bufferedWriter.write(result.getContent());
-                        System.out.println("Wrote page to file: webpage.html");
-                    }
+                    handleHtmlPage(result);
 
                 }else{
-                    try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "response." + parseExtension(request.getPath())))) {
-                        bufferedWriter.write(result.getContent());
-                        System.out.println("Wrote page to file: response." + parseExtension(request.getPath()));
-                    }
+                    handleOtherResponse(request, result);
                 }
 
                 System.out.println();
@@ -69,41 +50,44 @@ public class TCPClient
         }
     }
 
-    private static Request parseRequest(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException {
-        if (args.length != 3)
-            throw new IllegalArgumentException();
+    private static Response handleRedirect(Request request, Response result) throws IllegalHeaderException, IllegalResponseException, UnsupportedHTTPVersionException, IOException {
+        String newLocation = result.getHeader("location");
+        System.out.println("Redirecting to "+newLocation);
+        Request newRequest = new Request(request.getType(),newLocation,request.getVersion());
+        return connections.get(0).sendRequest(newRequest);
+    }
 
-        RequestType type;
-        try {
-            type = RequestType.valueOf(args[0]);
-        } catch (IllegalArgumentException e){
-            throw new UnsupportedHTTPCommandException();
+    static void handleHtmlPage(Response result) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
+        Document parsedHtml = Jsoup.parse(result.getContent());
+        Elements elements = parsedHtml.getElementsByAttribute("src");
+        Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
+        elements.addAll(cssStyleSheets);
+
+        File directory = new File(absolutePath);
+        if (!directory.exists()) {
+            directory.mkdir();
         }
 
-        String rawUri = args[1];
-        if (!rawUri.startsWith("http://"))
-            rawUri = "http://" + rawUri;
+        for (Element element : elements) {
+            fetchElement(element);
+        }
 
-        URI uri = new URI(rawUri);
+        result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
 
-        int port = Integer.parseInt(args[2]);
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "webpage.html"))) {
+            bufferedWriter.write(result.getContent());
+            System.out.println("Wrote page to file: webpage.html");
+        }
+    }
 
-        TCPClient.connections.add(new Connection(uri.getHost(), port));
-        if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
-            System.out.println("Enter file data here. Close with CRLF.CRLFCRLF:");
-            Scanner userInput = new Scanner(System.in);
-            String content = userInput.nextLine();
-            while (true) {
-                String newLine = userInput.nextLine();
-                content = content.concat("\r\n"+newLine);
-                if (content.endsWith("\r\n.\r\n")){
-                    content = content.substring(0,content.length()-5);
-                    break;
-                }
-            }
-            return new Request(type, uri.getPath(), HTTPVersion.HTTP11, content, "text/plain");
-        }else{
-            return new Request(type, uri.getPath(), HTTPVersion.HTTP11);
+    static void handleOtherResponse(Request request, Response result) throws IOException {
+        String extension = parseExtension(request.getPath());
+        if (!extension.isEmpty()){
+            extension = "." + extension;
+        }
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "response" + extension))) {
+            bufferedWriter.write(result.getContent());
+            System.out.println("Wrote page to file: response" + extension);
         }
     }
 
@@ -161,6 +145,43 @@ public class TCPClient
         return parseExtension(uriElement.getPath());
     }
 
+    private static Request parseRequest(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException {
+        if (args.length != 3)
+            throw new IllegalArgumentException();
+
+        RequestType type;
+        try {
+            type = RequestType.valueOf(args[0]);
+        } catch (IllegalArgumentException e){
+            throw new UnsupportedHTTPCommandException();
+        }
+
+        String rawUri = args[1];
+        if (!rawUri.startsWith("http://"))
+            rawUri = "http://" + rawUri;
+
+        URI uri = new URI(rawUri);
+
+        int port = Integer.parseInt(args[2]);
+
+        TCPClient.connections.add(new Connection(uri.getHost(), port));
+        if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
+            System.out.println("Enter file data here. Close with CRLF.CRLFCRLF:");
+            Scanner userInput = new Scanner(System.in);
+            String content = userInput.nextLine();
+            while (true) {
+                String newLine = userInput.nextLine();
+                content = content.concat("\r\n"+newLine);
+                if (content.endsWith("\r\n.\r\n")){
+                    content = content.substring(0,content.length()-5);
+                    break;
+                }
+            }
+            return new Request(type, uri.getPath(), HTTPVersion.HTTP11, content, "text/plain");
+        }else{
+            return new Request(type, uri.getPath(), HTTPVersion.HTTP11);
+        }
+    }
 
     private static String parseExtension(String path) {
         String filename;
