@@ -31,24 +31,33 @@ public class TCPClient
             Response result = connections.get(0).sendRequest(request);
 
             if (request.getType() != RequestType.HEAD) {
-                Document parsedHtml = Jsoup.parse(result.getContent());
-                Elements elements = parsedHtml.getElementsByAttribute("src");
-                Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
-                elements.addAll(cssStyleSheets);
+                if ("text/html".equals(result.getHeader("content-type"))) {
+                    Document parsedHtml = Jsoup.parse(result.getContent());
+                    Elements elements = parsedHtml.getElementsByAttribute("src");
+                    Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
+                    elements.addAll(cssStyleSheets);
 
-                File directory = new File(absolutePath);
-                if (!directory.exists()) {
-                    directory.mkdir();
-                }
+                    File directory = new File(absolutePath);
+                    if (!directory.exists()) {
+                        directory.mkdir();
+                    }
 
-                for (Element element : elements) {
-                    fetchElement(element);
-                }
+                    for (Element element : elements) {
+                        fetchElement(element);
+                    }
 
-                result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
-                try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "webpage.html"))) {
-                    bufferedWriter.write(result.getContent());
-                    System.out.println("Wrote page to file: webpage.html");
+                    result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
+
+                    try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "webpage.html"))) {
+                        bufferedWriter.write(result.getContent());
+                        System.out.println("Wrote page to file: webpage.html");
+                    }
+
+                }else{
+                    try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "response." + parseExtension(request.getPath())))) {
+                        bufferedWriter.write(result.getContent());
+                        System.out.println("Wrote page to file: response." + parseExtension(request.getPath()));
+                    }
                 }
 
                 System.out.println();
@@ -86,9 +95,6 @@ public class TCPClient
             String content = userInput.nextLine();
             while (true) {
                 String newLine = userInput.nextLine();
-//                if (newLine.isEmpty()){
-//                    break;
-//                }
                 content = content.concat("\r\n"+newLine);
                 if (content.endsWith("\r\n.\r\n")){
                     content = content.substring(0,content.length()-5);
@@ -134,7 +140,7 @@ public class TCPClient
         }else{
             element.attr("src", filename);
         }
-        System.out.println("Wrote resource to file: " + file.getPath());
+        System.out.println("Wrote resource to file: " + file.getName());
     }
 
     private static Connection getConnection(String host) throws IOException {
@@ -152,12 +158,17 @@ public class TCPClient
     }
 
     private static String parseExtension(URI uriElement) {
+        return parseExtension(uriElement.getPath());
+    }
+
+
+    private static String parseExtension(String path) {
         String filename;
         try {
-            String[] pathSplit = uriElement.getPath().split("/");
+            String[] pathSplit = path.split("/");
             filename = pathSplit[pathSplit.length - 1];
         } catch (IndexOutOfBoundsException e){
-            filename = uriElement.getPath();
+            filename = path;
         }
         if (filename.contains(".")){
             try {
