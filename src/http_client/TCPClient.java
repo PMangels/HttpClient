@@ -47,14 +47,12 @@ public class TCPClient
 
         Connection connection = new Connection(uri.getHost(), port);
         Request request = new Request(type, uri.getPath(), HTTPVersion.HTTP11, content);
-        ConnectionResponse result = connection.sendRequest(request);
+        Response result = connection.sendRequest(request);
 
-        Document parsedHtml = Jsoup.parse(result.response.getContent());
+        Document parsedHtml = Jsoup.parse(result.getContent());
         Elements elements = parsedHtml.getElementsByAttribute("src");
         Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel","stylesheet");
-        for (Element cssStyleSheet:cssStyleSheets){
-            elements.add(cssStyleSheet);
-        }
+        elements.addAll(cssStyleSheets);
         ArrayList<Connection> connections = new ArrayList<>();
         String absolutePath = System.getProperty("user.dir") + "/Files/";
         File directory = new File (absolutePath);
@@ -62,7 +60,7 @@ public class TCPClient
             directory.mkdir();
         }
         for (Element element: elements){
-            ConnectionResponse response;
+            Response response;
             URI uriElement;
             if (element.attr("rel").equals("stylesheet")){
                 uriElement = new URI(element.attr("href"));
@@ -80,9 +78,6 @@ public class TCPClient
             String resource_host = uriElement.getHost();
             if (resource_host == null || resource_host.equals(connection.getHost())) {
                 response = connection.sendRequest(req);
-                if (response.connection != connection){
-                    connection = response.connection;
-                }
             }
             else{
                 Connection resource_connection = null;
@@ -97,10 +92,6 @@ public class TCPClient
                     connections.add(resource_connection);
                 }
                 response = resource_connection.sendRequest(req);
-                if (response.connection != resource_connection){
-                    connections.remove(resource_connection);
-                    connections.add(response.connection);
-                }
             }
             List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
             String extension;
@@ -136,7 +127,7 @@ public class TCPClient
                 version+=1;
             }
             if (imageExtensions.contains(extension)){
-                byte[] byteString = getDecoder().decode(response.response.getContent().getBytes(StandardCharsets.UTF_8));
+                byte[] byteString = getDecoder().decode(response.getContent().getBytes(StandardCharsets.UTF_8));
                 BufferedImage bufferedImage;
                 ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteString);
                 try {
@@ -167,7 +158,7 @@ public class TCPClient
             }
             else{
                 try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file))) {
-                    bufferedWriter.write(response.response.getContent());
+                    bufferedWriter.write(response.getContent());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -190,8 +181,9 @@ public class TCPClient
                 }
             }
         }
-        result.response.setContent(parsedHtml.toString());
-        writeHtmlToFile(result.response, absolutePath);
+        result.setContent(parsedHtml.toString());
+        writeHtmlToFile(result, absolutePath);
+        //TODO: close all connections
     }
 
     public static void writeHtmlToFile(Response result, String absolutePath) {

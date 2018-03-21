@@ -4,12 +4,13 @@ import http_datastructures.*;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.*;
 import java.util.List;
 import static java.util.Base64.*;
 
 public class Connection {
-    private final Socket socket;
+    private Socket socket;
     private final String host;
     private final int port;
 
@@ -23,7 +24,7 @@ public class Connection {
         this.socket = new Socket(host, port);
     }
 
-    public ConnectionResponse sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
+    public Response sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         request.addHeader("Host", this.host + ":" + this.port);
@@ -31,28 +32,37 @@ public class Connection {
 
         StringBuilder responseBuffer = new StringBuilder();
 
-
         try{
-            while (true) {
-                responseBuffer.append((char) inputStream.readByte());
-                if (responseBuffer.toString().endsWith("\r\n\r\n")) {
-                    break;
-                }
-            }
-        } catch (java.io.EOFException e){
-            //reconnect to website that disconnected.
-            System.out.println("Socket died, reconnecting.");
-            Connection new_connection = new Connection(host, port);
-            return new_connection.sendRequest(request);
+            responseBuffer.append((char) inputStream.readByte());
+        } catch (EOFException | SocketException e){
+            this.socket = new Socket(this.host, this.port);
+            outputStream = new DataOutputStream(socket.getOutputStream());
+            inputStream = new DataInputStream(socket.getInputStream());
+            outputStream.writeBytes(request.toString());
         }
+        do {
+            int index = responseBuffer.indexOf("\r\n\r\n");
+            if (index != -1)
+                responseBuffer.delete(0, index);
+            while (!responseBuffer.toString().endsWith("\r\n\r\n")) {
+                responseBuffer.append((char) inputStream.readByte());
+            }
+        } while (responseBuffer.toString().endsWith("100 Continue\r\n\r\n"));
 
         int length = 0;
         HttpContentType type = HttpContentType.UNDEFINED;
         for (String line : responseBuffer.toString().split("\r\n")) {
-            if (line.toLowerCase().startsWith("content-length: ")) {
-                length = Integer.parseInt(line.substring(16));
+            if (line.toLowerCase().startsWith("content-length:")) {
+                String[] lineParts = line.split(":");
+                if (lineParts.length != 2)
+                    throw new IllegalHeaderException(line);
+                try {
+                    length = Integer.parseInt(lineParts[1].trim());
+                }catch (NumberFormatException e){
+                    throw new IllegalHeaderException(line);
+                }
             }
-            if (line.toLowerCase().startsWith("content-type: ")){
+            if (line.toLowerCase().startsWith("content-type:")){
                 if(line.toLowerCase().contains("image")){
                     type = HttpContentType.IMAGE;
                 }
@@ -71,9 +81,7 @@ public class Connection {
         String byteString;
         String extension;
         try {
-            String[] urlSplit = request.getPath().split("/");
-            String filename = urlSplit[urlSplit.length - 1];
-            String[] filenameSplit = filename.split("\\.");
+            String[] filenameSplit = request.getPath().split("\\.");
             extension = filenameSplit[filenameSplit.length - 1].toLowerCase();
         } catch (IndexOutOfBoundsException e) {
             extension = "";
@@ -87,7 +95,7 @@ public class Connection {
         responseBuffer.append(byteString);
 
 
-        return new ConnectionResponse(new Response(responseBuffer.toString()),this);
+        return new Response(responseBuffer.toString());
     }
 
 }

@@ -31,8 +31,11 @@ public class Response extends HTTPMessage {
             default:
                 throw new UnsupportedHTTPVersionException();
         }
-
-        this.statusCode = Integer.parseInt(firstLine[1]);
+        try {
+            this.statusCode = Integer.parseInt(firstLine[1]);
+        }catch (NumberFormatException e){
+            throw new IllegalResponseException();
+        }
         this.status = firstLine[2];
     }
 
