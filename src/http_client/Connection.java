@@ -49,6 +49,9 @@ public class Connection {
             }
         } while (responseBuffer.toString().endsWith("100 Continue\r\n\r\n"));
 
+        if (request.getType() == RequestType.HEAD)
+            return new Response(responseBuffer.toString());
+
         int length = 0;
         HttpContentType type = HttpContentType.UNDEFINED;
         for (String line : responseBuffer.toString().split("\r\n")) {
@@ -75,23 +78,14 @@ public class Connection {
             byteCount += inputStream.read(bytes, byteCount, length - byteCount);
         }
 
-        List<String> imageExtensions = Arrays.asList("jpeg", "jpg", "png", "bmp", "wbmp", "gif");
         String byteString;
-        String extension;
-        try {
-            String[] filenameSplit = request.getPath().split("\\.");
-            extension = filenameSplit[filenameSplit.length - 1].toLowerCase();
-        } catch (IndexOutOfBoundsException e) {
-            extension = "";
-        }
-        if (imageExtensions.contains(extension)||type.equals(HttpContentType.IMAGE)){
+        if (type.equals(HttpContentType.IMAGE)){
             byteString = new String(getEncoder().encode(bytes),"UTF-8");
         }
         else{
             byteString = new String(bytes, "UTF-8");
         }
         responseBuffer.append(byteString);
-
 
         return new Response(responseBuffer.toString());
     }

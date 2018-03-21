@@ -30,27 +30,30 @@ public class TCPClient
             Request request = parseRequest(args);
             Response result = connections.get(0).sendRequest(request);
 
-            Document parsedHtml = Jsoup.parse(result.getContent());
-            Elements elements = parsedHtml.getElementsByAttribute("src");
-            Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
-            elements.addAll(cssStyleSheets);
+            if (request.getType() != RequestType.HEAD) {
+                Document parsedHtml = Jsoup.parse(result.getContent());
+                Elements elements = parsedHtml.getElementsByAttribute("src");
+                Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
+                elements.addAll(cssStyleSheets);
 
-            File directory = new File(absolutePath);
-            if (!directory.exists()) {
-                directory.mkdir();
-            }
+                File directory = new File(absolutePath);
+                if (!directory.exists()) {
+                    directory.mkdir();
+                }
 
-            for (Element element : elements) {
-                fetchElement(element);
-            }
+                for (Element element : elements) {
+                    fetchElement(element);
+                }
 
-            result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
-            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath+"webpage.html"))) {
-                bufferedWriter.write(result.getContent());
-                System.out.println("Wrote page to file: webpage.html");
+                result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
+                try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "webpage.html"))) {
+                    bufferedWriter.write(result.getContent());
+                    System.out.println("Wrote page to file: webpage.html");
+                }
+
+                System.out.println();
             }
-            System.out.println();
-            System.out.println(result.getContent());
+            System.out.println(result.toString());
         }
         finally {
             connections.forEach(Connection::close);
