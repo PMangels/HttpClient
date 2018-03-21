@@ -5,8 +5,6 @@ import http_datastructures.*;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.*;
-import java.util.List;
 import static java.util.Base64.*;
 
 public class Connection {
