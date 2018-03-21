@@ -27,6 +27,15 @@ public class TCPClient
         } catch (IllegalArgumentException e){
             throw new UnsupportedHTTPCommandException();
         }
+        String content;
+        if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
+            System.out.println("Enter file data here:");
+            Scanner userInput = new Scanner(System.in);
+            content = userInput.nextLine();
+        }else{
+            content = "";
+        }
+
 
         String rawUri = args[1];
         if (!rawUri.startsWith("http://"))
@@ -37,7 +46,7 @@ public class TCPClient
         int port = Integer.parseInt(args[2]);
 
         Connection connection = new Connection(uri.getHost(), port);
-        Request request = new Request(type, uri.getPath(), HTTPVersion.HTTP11, "");
+        Request request = new Request(type, uri.getPath(), HTTPVersion.HTTP11, content);
         ConnectionResponse result = connection.sendRequest(request);
 
         Document parsedHtml = Jsoup.parse(result.response.getContent());
