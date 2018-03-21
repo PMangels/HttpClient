@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class HTTPMessage {
 
-    private String content;
+    private String content = "";
     HTTPVersion version;
     private Map<String, String> headers = new HashMap<>();
     String firstLine;
@@ -41,9 +41,13 @@ public class HTTPMessage {
         return version;
     }
 
-    public HTTPMessage(HTTPVersion version, String content){
+    public HTTPMessage(HTTPVersion version, String content, String contentType){
+        this(version);
+        this.setContent(content, contentType);
+    }
+
+    public HTTPMessage(HTTPVersion version){
         this.version = version;
-        this.content = content;
     }
 
     public HTTPMessage(String rawMessage) throws IllegalHeaderException {
@@ -73,10 +77,16 @@ public class HTTPMessage {
 
     @Override
     public String toString() {
-        return firstLine + "\r\n" + headerString() + "\r\n" + content;
+        String terminationString = "\r\n\r\n";
+        if (content.isEmpty())
+            terminationString = "";
+
+        return firstLine + "\r\n" + headerString() + "\r\n" + content + terminationString;
     }
 
-    public void setContent(String content) {
+    public void setContent(String content, String contentType) {
         this.content = content;
+        this.headers.put("Content-length", String.valueOf(content.getBytes().length));
+        this.headers.put("Content-type", contentType);
     }
 }

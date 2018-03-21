@@ -14,10 +14,50 @@ import java.util.*;
 import http_datastructures.*;
 
 import static java.util.Base64.*;
-
+//TODO: handle 303 redirect
 public class TCPClient
 {
+    private static List<Connection> connections = new ArrayList<>();
+
+    private static int resourceCounter = 0;
+
+    private static final String absolutePath = System.getProperty("user.dir") + "/Files/";
+
+    private static final List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
+
     public static void main(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
+        try {
+            Request request = parseRequest(args);
+            Response result = connections.get(0).sendRequest(request);
+
+            Document parsedHtml = Jsoup.parse(result.getContent());
+            Elements elements = parsedHtml.getElementsByAttribute("src");
+            Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
+            elements.addAll(cssStyleSheets);
+
+            File directory = new File(absolutePath);
+            if (!directory.exists()) {
+                directory.mkdir();
+            }
+
+            for (Element element : elements) {
+                fetchElement(element);
+            }
+
+            result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
+            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath+"webpage.html"))) {
+                bufferedWriter.write(result.getContent());
+                System.out.println("Wrote page to file: webpage.html");
+            }
+            System.out.println();
+            System.out.println(result.getContent());
+        }
+        finally {
+            connections.forEach(Connection::close);
+        }
+    }
+
+    private static Request parseRequest(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException {
         if (args.length != 3)
             throw new IllegalArgumentException();
 
@@ -27,15 +67,6 @@ public class TCPClient
         } catch (IllegalArgumentException e){
             throw new UnsupportedHTTPCommandException();
         }
-        String content;
-        if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
-            System.out.println("Enter file data here:");
-            Scanner userInput = new Scanner(System.in);
-            content = userInput.nextLine();
-        }else{
-            content = "";
-        }
-
 
         String rawUri = args[1];
         if (!rawUri.startsWith("http://"))
@@ -45,156 +76,103 @@ public class TCPClient
 
         int port = Integer.parseInt(args[2]);
 
-        Connection connection = new Connection(uri.getHost(), port);
-        Request request = new Request(type, uri.getPath(), HTTPVersion.HTTP11, content);
-        Response result = connection.sendRequest(request);
-
-        Document parsedHtml = Jsoup.parse(result.getContent());
-        Elements elements = parsedHtml.getElementsByAttribute("src");
-        Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel","stylesheet");
-        elements.addAll(cssStyleSheets);
-        ArrayList<Connection> connections = new ArrayList<>();
-        String absolutePath = System.getProperty("user.dir") + "/Files/";
-        File directory = new File (absolutePath);
-        if (!directory.exists()){
-            directory.mkdir();
+        TCPClient.connections.add(new Connection(uri.getHost(), port));
+        if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
+            System.out.println("Enter file data here:");
+            Scanner userInput = new Scanner(System.in);
+            return new Request(type, uri.getPath(), HTTPVersion.HTTP11, userInput.nextLine(), "text/plain");
+        }else{
+            return new Request(type, uri.getPath(), HTTPVersion.HTTP11);
         }
-        for (Element element: elements){
-            Response response;
-            URI uriElement;
-            if (element.attr("rel").equals("stylesheet")){
-                uriElement = new URI(element.attr("href"));
-            } else {
-                uriElement = new URI(element.attr("src"));
-            }
-            String filename;
-            try {
-                String[] pathSplit = uriElement.getPath().split("/");
-                filename = pathSplit[pathSplit.length - 1];
-            } catch (IndexOutOfBoundsException e){
-                filename = uriElement.getPath();
-            }
-            Request req = new Request(RequestType.GET, uriElement.getPath(), HTTPVersion.HTTP11, "");
-            String resource_host = uriElement.getHost();
-            if (resource_host == null || resource_host.equals(connection.getHost())) {
-                response = connection.sendRequest(req);
-            }
-            else{
-                Connection resource_connection = null;
-                for (Connection active_connection: connections) {
-                    if (resource_host.equals(active_connection.getHost())){
-                        resource_connection = active_connection;
-                        break;
-                    }
-                }
-                if (resource_connection == null) {
-                    resource_connection = new Connection(resource_host,80);
-                    connections.add(resource_connection);
-                }
-                response = resource_connection.sendRequest(req);
-            }
-            List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
-            String extension;
-            if (filename.contains(".")){
-                try {
-                    String[] filenameSplit = filename.split("\\.");
-                    extension = filenameSplit[filenameSplit.length - 1].toLowerCase();
-                } catch (IndexOutOfBoundsException e){
-                    extension = "";
-                }
-            } else {
-                extension = "";
-            }
-            int length_extension;
-            if (extension.length()==0){
-                length_extension = 0;
-            } else{
-                length_extension = (extension.length()+1);
-            }
-            String saveName = filename.substring(0,filename.length()-length_extension);
-            File file;
-            if (extension.length()!=0)
-                file = new File(absolutePath +saveName+"."+extension);
-            else
-                file = new File(absolutePath+saveName);
-            int version = 1;
-            while (!file.createNewFile()){
-                saveName = filename.substring(0,filename.length()-length_extension).concat("_"+version);
-                if (extension.length()!=0)
-                    file = new File(absolutePath +saveName+"."+extension);
-                else
-                    file = new File(absolutePath+saveName);
-                version+=1;
-            }
-            if (imageExtensions.contains(extension)){
-                byte[] byteString = getDecoder().decode(response.getContent().getBytes(StandardCharsets.UTF_8));
-                BufferedImage bufferedImage;
-                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteString);
-                try {
-                    bufferedImage = ImageIO.read(byteArrayInputStream);
-                } catch (IOException e) {
-                    bufferedImage = null;
-                    e.printStackTrace();
-                }
-                //Todo: can't decode some files although other files with same extension do work
-                if (bufferedImage == null){ // Shouldn't happen but there are some files that the ImageIO.read doesn't always work.
-                    try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file))) {
-                        if (extension.length()!=0)
-                            System.out.println("Couldn't decode file: Wrote dummy file to: "+saveName+"."+extension);
-                        else
-                            System.out.println("Couldn't decode file: Wrote dummy file to: "+saveName);
-
-                        bufferedWriter.write("");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } else{
-                    try {
-                        ImageIO.write(bufferedImage, extension, file);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            else{
-                try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file))) {
-                    bufferedWriter.write(response.getContent());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (element.attr("rel").equals("stylesheet")){
-                if (extension.length()!=0) {
-                    element.attr("href", saveName + "." + extension);
-                    System.out.println("Wrote resource to file: " + saveName + "." + extension);
-                }else {
-                    element.attr("href", saveName);
-                    System.out.println("Wrote resource to file: " + saveName);
-                }            }
-            else{
-                if (extension.length()!=0) {
-                    element.attr("src", saveName + "." + extension);
-                    System.out.println("Wrote resource to file: " + saveName + "." + extension);
-                }else {
-                    element.attr("src", saveName);
-                    System.out.println("Wrote resource to file: " + saveName);
-                }
-            }
-        }
-        result.setContent(parsedHtml.toString());
-        writeHtmlToFile(result, absolutePath);
-        //TODO: close all connections
     }
 
-    public static void writeHtmlToFile(Response result, String absolutePath) {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath+"webpage.html"))) {
-            bufferedWriter.write(result.getContent());
-            System.out.println("Wrote page to file: webpage.html");
-        } catch (IOException e) {
-            e.printStackTrace();
+    private static void fetchElement(Element element) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
+        resourceCounter++;
+        URI uriElement;
+        boolean href = element.attr("rel").equals("stylesheet");
+        if (href){
+            uriElement = new URI(element.attr("href"));
+        } else {
+            uriElement = new URI(element.attr("src"));
         }
-        System.out.println();
-        System.out.println(result.getContent());
+
+        Request req = new Request(RequestType.GET, uriElement.getPath(), HTTPVersion.HTTP11);
+        String host = uriElement.getHost();
+        Connection connection = getConnection(host);
+        Response response = connection.sendRequest(req);
+
+        String extension = parseExtension(uriElement);
+        String filename = String.valueOf(resourceCounter);
+        if (!extension.isEmpty())
+            filename += "." + extension;
+        File file = new File(absolutePath + filename);
+
+
+        if (imageExtensions.contains(extension)){
+            writeImage(response.getContent(), file, extension);
+        }
+        else{
+            writeFile(response.getContent(), file);
+        }
+        if (href){
+            element.attr("href", filename);
+        }else{
+            element.attr("src", filename);
+        }
+        System.out.println("Wrote resource to file: " + file.getPath());
+    }
+
+    private static Connection getConnection(String host) throws IOException {
+        if (host == null) {
+            return connections.get(0);
+        }
+        for (Connection activeConnection : connections){
+            if (host.equals(activeConnection.getHost())){
+                return activeConnection;
+            }
+        }
+        Connection connection = new Connection(host,80);
+        connections.add(connection);
+        return connection;
+    }
+
+    private static String parseExtension(URI uriElement) {
+        String filename;
+        try {
+            String[] pathSplit = uriElement.getPath().split("/");
+            filename = pathSplit[pathSplit.length - 1];
+        } catch (IndexOutOfBoundsException e){
+            filename = uriElement.getPath();
+        }
+        if (filename.contains(".")){
+            try {
+                String[] filenameSplit = filename.split("\\.");
+                return filenameSplit[filenameSplit.length - 1].toLowerCase();
+            } catch (IndexOutOfBoundsException e){
+                return  "";
+            }
+        } else {
+            return  "";
+        }
+    }
+
+    private static void writeFile(String content, File file) throws IOException {
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file))) {
+            bufferedWriter.write(content);
+        }
+    }
+
+    private static void writeImage(String content, File file, String extension) throws IOException {
+        byte[] byteString = getDecoder().decode(content.getBytes(StandardCharsets.UTF_8));
+        BufferedImage bufferedImage;
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteString);
+        bufferedImage = ImageIO.read(byteArrayInputStream);
+
+        if (bufferedImage != null) {
+            ImageIO.write(bufferedImage, extension, file);
+        }else{
+            System.out.println("The requested image: " + file.getPath() + " could not be downloaded from the server.");
+        }
     }
 
 }

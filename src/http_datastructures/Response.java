@@ -39,8 +39,15 @@ public class Response extends HTTPMessage {
         this.status = firstLine[2];
     }
 
-    public Response(HTTPVersion version, int statusCode, String status, String content){
-        super(version, content);
+    public Response(HTTPVersion version, int statusCode, String status, String content, String contentType){
+        super(version, content, contentType);
+
+        this.statusCode = statusCode;
+        this.status = status;
+    }
+
+    public Response(HTTPVersion version, int statusCode, String status){
+        super(version);
 
         this.statusCode = statusCode;
         this.status = status;

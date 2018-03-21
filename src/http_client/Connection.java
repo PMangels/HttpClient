@@ -69,8 +69,6 @@ public class Connection {
             }
         }
 
-
-
         int byteCount = 0;
         byte[] bytes = new byte[length];
         while (byteCount != length) {
@@ -96,6 +94,15 @@ public class Connection {
 
 
         return new Response(responseBuffer.toString());
+    }
+
+    public void close() {
+        try {
+            this.socket.close();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+        this.socket = null;
     }
 
 }
