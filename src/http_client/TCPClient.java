@@ -81,9 +81,21 @@ public class TCPClient
 
         TCPClient.connections.add(new Connection(uri.getHost(), port));
         if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
-            System.out.println("Enter file data here:");
+            System.out.println("Enter file data here. Close with CRLF.CRLFCRLF:");
             Scanner userInput = new Scanner(System.in);
-            return new Request(type, uri.getPath(), HTTPVersion.HTTP11, userInput.nextLine(), "text/plain");
+            String content = userInput.nextLine();
+            while (true) {
+                String newLine = userInput.nextLine();
+//                if (newLine.isEmpty()){
+//                    break;
+//                }
+                content = content.concat("\r\n"+newLine);
+                if (content.endsWith("\r\n.\r\n")){
+                    content = content.substring(0,content.length()-5);
+                    break;
+                }
+            }
+            return new Request(type, uri.getPath(), HTTPVersion.HTTP11, content, "text/plain");
         }else{
             return new Request(type, uri.getPath(), HTTPVersion.HTTP11);
         }
