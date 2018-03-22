@@ -24,7 +24,6 @@
 
         private static final List<String> imageExtensions = Arrays.asList("jpeg", "jpg","png", "bmp", "wbmp", "gif");
 
-        //TODO: handle chunckes
         public static void main(String [] args) throws UnsupportedHTTPCommandException, URISyntaxException, IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
             try {
                 Request request = parseRequest(args);
@@ -39,7 +38,7 @@
                     result = handleRedirect(request,result);
                 }
                 if (request.getType() != RequestType.HEAD) {
-                    if (!result.hasHeader("content-type") || (result.getHeader("content-type")).contains("text/html")) {
+                    if ((!result.hasHeader("content-type") || (result.getHeader("content-type")).contains("text/html")) && !result.getContent().isEmpty()) {
                         handleHtmlPage(result);
 
                     }else{
@@ -62,7 +61,7 @@
             return connections.get(0).sendRequest(newRequest);
         }
 
-        static void handleHtmlPage(Response result) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
+        private static void handleHtmlPage(Response result) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
             Document parsedHtml = Jsoup.parse(result.getContent());
             Elements elements = parsedHtml.getElementsByAttribute("src");
             Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
@@ -80,15 +79,19 @@
             }
         }
 
-        static void handleOtherResponse(Request request, Response result) throws IOException {
+        private static void handleOtherResponse(Request request, Response result) throws IOException {
             String extension = parseExtension(request.getPath());
             if (!extension.isEmpty()){
                 extension = "." + extension;
             }
-            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "response" + extension))) {
-                bufferedWriter.write(result.getContent());
-                System.out.println("Wrote page to file: response" + extension);
+            File file = new File(absolutePath + "response" + extension);
+            if (!extension.isEmpty() && imageExtensions.contains(extension.substring(1))){
+                writeImage(result.getContent(), file, extension.substring(1));
             }
+            else{
+                writeFile(result.getContent(), file);
+            }
+            System.out.println("Wrote page to file: response" + extension);
         }
 
         private static void fetchElement(Element element) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
