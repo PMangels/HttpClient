@@ -2,9 +2,12 @@ package http_client;
 
 import http_datastructures.*;
 
+import java.awt.*;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+
 import static java.util.Base64.*;
 
 public class Connection {
@@ -52,6 +55,7 @@ public class Connection {
 
         int length = 0;
         HttpContentType type = HttpContentType.UNDEFINED;
+        boolean chunked = false;
         for (String line : responseBuffer.toString().split("\r\n")) {
             if (line.toLowerCase().startsWith("content-length:")) {
                 String[] lineParts = line.split(":");
@@ -68,12 +72,20 @@ public class Connection {
                     type = HttpContentType.IMAGE;
                 }
             }
+            if (line.toLowerCase().startsWith("transfer-encoding:") && line.toLowerCase().contains("chunked")){
+                chunked = true;
+            }
         }
 
-        int byteCount = 0;
-        byte[] bytes = new byte[length];
-        while (byteCount != length) {
-            byteCount += inputStream.read(bytes, byteCount, length - byteCount);
+        byte[] bytes;
+        if (chunked){
+            bytes = parseBodyChunked(inputStream);
+            do{
+                responseBuffer.insert(responseBuffer.length()-2,(char) inputStream.readByte());
+            }while (!responseBuffer.toString().endsWith("\r\n\r\n\r\n"));
+            responseBuffer.delete(responseBuffer.length()-2,responseBuffer.length());
+        }else{
+            bytes = parseBody(inputStream, length);
         }
 
         String byteString;
@@ -86,6 +98,34 @@ public class Connection {
         responseBuffer.append(byteString);
 
         return new Response(responseBuffer.toString());
+    }
+
+    private byte[] parseBodyChunked(DataInputStream inputStream) throws IOException {
+        int length = -1;
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        while (length != 0){
+            StringBuilder responseBuffer = new StringBuilder();
+            while (!responseBuffer.toString().endsWith("\r\n")) {
+                responseBuffer.append((char) inputStream.readByte());
+            }
+            String[] firstline = responseBuffer.toString().split(";");
+            length = Integer.parseInt(firstline[0].replace("\r\n",""), 16);
+            buffer.write(parseBody(inputStream, length));
+            if (length!=0) {
+                inputStream.readByte();
+                inputStream.readByte();
+            }
+        }
+        return buffer.toByteArray();
+    }
+
+    private byte[] parseBody(DataInputStream inputStream, int length) throws IOException {
+        int byteCount = 0;
+        byte[] bytes = new byte[length];
+        while (byteCount != length) {
+            byteCount += inputStream.read(bytes, byteCount, length - byteCount);
+        }
+        return bytes;
     }
 
     public void close() {

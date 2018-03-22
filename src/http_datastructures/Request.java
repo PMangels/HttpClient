@@ -21,6 +21,7 @@ public class Request extends HTTPMessage {
             path = "/" + path;
 
         this.path = path;
+        this.firstLine = type.toString()+ " " + path + " " + version.toString();
     }
 
     public Request(RequestType type, String path, HTTPVersion version, String content, String contentType) {
@@ -31,6 +32,7 @@ public class Request extends HTTPMessage {
             path = "/" + path;
 
         this.path = path;
+        this.firstLine = type.toString()+ " " + path + " " + version.toString();
     }
 
     public Request(String requestString) throws UnsupportedHTTPCommandException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalRequestException {
@@ -62,7 +64,10 @@ public class Request extends HTTPMessage {
 
     @Override
     public String toString() {
-        this.firstLine = this.type.typeString + " " + this.path + " " + this.getVersion().versionString;
+        String terminationString = "\r\n\r\n";
+        if (this.getContent().isEmpty())
+            terminationString = "";
+        this.setTerminationString(terminationString);
         return super.toString();
     }
 }
