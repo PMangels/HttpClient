@@ -13,6 +13,15 @@ public class HTTPMessage {
     HTTPVersion version;
     private Map<String, String> headers = new HashMap<>();
     String firstLine;
+    private String terminationString = "";
+
+    public String getTerminationString() {
+        return terminationString;
+    }
+
+    public void setTerminationString(String terminationString) {
+        this.terminationString = terminationString;
+    }
 
     /**
      * Get the headers for this message.
@@ -36,7 +45,7 @@ public class HTTPMessage {
      * @param value A string containing the right side of this header.
      */
    public void addHeader(String key, String value){
-        this.headers.put(key, value);
+        this.headers.put(key.toLowerCase(), value);
    }
 
     /**
@@ -47,7 +56,11 @@ public class HTTPMessage {
      */
    public String getHeader(String key){
         return this.headers.get(key.toLowerCase());
-   }
+    }
+
+    public boolean hasHeader(String key){
+        return this.headers.containsKey(key.toLowerCase());
+    }
 
     /**
      * Returns the headers of this message as a string.
@@ -56,14 +69,14 @@ public class HTTPMessage {
      */
    public String headerString(){
         StringBuilder output = new StringBuilder();
-       for (Map.Entry<String, String> header : this.headers.entrySet()) {
-           output.append(header.getKey());
-           output.append(": ");
-           output.append(header.getValue());
-           output.append("\r\n");
-       }
-       return output.toString();
-   }
+        for (Map.Entry<String, String> header : this.headers.entrySet()) {
+            output.append(header.getKey());
+            output.append(": ");
+            output.append(header.getValue());
+            output.append("\r\n");
+        }
+        return output.toString();
+    }
 
     /**
      * Returns the version of the HTTP protocol being used for this message.
@@ -118,7 +131,7 @@ public class HTTPMessage {
                     if (headers.size() == 0)
                         throw new IllegalHeaderException(line);
 
-                    headers.put(lastHeader, headers.get(lastHeader) + lineParts[0].trim());
+                    headers.put(lastHeader.toLowerCase(), headers.get(lastHeader) + lineParts[0].trim());
                 }
                 lastHeader = lineParts[1].trim();
                 headers.put(lineParts[0].toLowerCase(), lastHeader);
@@ -132,11 +145,7 @@ public class HTTPMessage {
      */
     @Override
     public String toString() {
-        String terminationString = "\r\n\r\n";
-        if (content.isEmpty())
-            terminationString = "";
-
-        return firstLine + "\r\n" + headerString() + "\r\n" + content + terminationString;
+        return firstLine + "\r\n" + headerString() + "\r\n" + content + this.getTerminationString();
     }
 
     /**
@@ -148,7 +157,7 @@ public class HTTPMessage {
      */
     public void setContent(String content, String contentType) {
         this.content = content;
-        this.headers.put("Content-length", String.valueOf(content.getBytes().length));
-        this.headers.put("Content-type", contentType);
+        this.headers.put("content-length", String.valueOf(content.getBytes().length));
+        this.headers.put("content-type", contentType);
     }
 }

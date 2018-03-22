@@ -11,4 +11,9 @@ public enum HTTPVersion {
     HTTPVersion(String s) {
         this.versionString = s;
     }
+
+    @Override
+    public String toString() {
+        return this.versionString;
+    }
 }
