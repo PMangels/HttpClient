@@ -51,7 +51,7 @@ public class Connection {
             return new Response(responseBuffer.toString());
 
         int length = 0;
-        HttpContentType type = HttpContentType.UNDEFINED;
+        boolean isImage = false;
         for (String line : responseBuffer.toString().split("\r\n")) {
             if (line.toLowerCase().startsWith("content-length:")) {
                 String[] lineParts = line.split(":");
@@ -65,7 +65,7 @@ public class Connection {
             }
             if (line.toLowerCase().startsWith("content-type:")){
                 if(line.toLowerCase().contains("image")){
-                    type = HttpContentType.IMAGE;
+                    isImage = true;
                 }
             }
         }
@@ -77,7 +77,7 @@ public class Connection {
         }
 
         String byteString;
-        if (type.equals(HttpContentType.IMAGE)){
+        if (isImage){
             byteString = new String(getEncoder().encode(bytes),"UTF-8");
         }
         else{
