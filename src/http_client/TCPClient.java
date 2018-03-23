@@ -52,7 +52,7 @@
                     directory.mkdir();
                 }
 
-                if (301 == result.getStatusCode()   || 302 == result.getStatusCode() || 303 == result.getStatusCode()){
+                if (result.getStatusCode() >=300 && result.getStatusCode() < 400){
                     result = handleRedirect(request,result);
                 }
                 if (request.getType() != RequestType.HEAD) {
