@@ -13,16 +13,36 @@ public class Connection {
     private final String host;
     private final int port;
 
+    /**
+     * Retrieve the host for this connection.
+     * @return The host for this connection.
+     */
     public String getHost() {
         return host;
     }
 
+    /**
+     * Initialize a new connection to the provided host and port.
+     * @param host The host to connect to.
+     * @param port The port to connect to.
+     * @throws IOException An IOException occurred while trying to connect to this server.
+     */
     public Connection(String host, int port) throws IOException {
         this.host = host;
         this.port = port;
         this.socket = new Socket(host, port);
     }
 
+    /**
+     * Send the provided request over this connection and retrieve the response.
+     * If the connection to the server is down, it will be restarted.
+     * @param request The request to send.
+     * @return The response retrieved from the server.
+     * @throws IOException An IOException occurred while communicating to the server.
+     * @throws UnsupportedHTTPVersionException The response returned from the server uses an HTTP version not supported by this client.
+     * @throws IllegalHeaderException The response returned from the server contains a malformed header.
+     * @throws IllegalResponseException The response returned from the server is malformed.
+     */
     public Response sendRequest(Request request) throws IOException, UnsupportedHTTPVersionException, IllegalHeaderException, IllegalResponseException {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
@@ -98,6 +118,12 @@ public class Connection {
         return new Response(responseBuffer.toString());
     }
 
+    /**
+     * Read an HTTP response body from the provided inputstream using chunked transfer encoding.
+     * @param inputStream The inputstream to read the response from.
+     * @return The HTTP response body contents.
+     * @throws IOException An IOException occurred while communicating with the server.
+     */
     private byte[] parseBodyChunked(DataInputStream inputStream) throws IOException {
         int length = -1;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -117,6 +143,13 @@ public class Connection {
         return buffer.toByteArray();
     }
 
+    /**
+     * Read an HTTP response body from the provided inputstream.
+     * @param inputStream The inputstream to read the response from.
+     * @param length The content-length to be read.
+     * @return The HTTP response body contents.
+     * @throws IOException An IOException occurred while communicating with the server.
+     */
     private byte[] parseBody(DataInputStream inputStream, int length) throws IOException {
         int byteCount = 0;
         byte[] bytes = new byte[length];
@@ -126,6 +159,9 @@ public class Connection {
         return bytes;
     }
 
+    /**
+     * Close this connection by closing the underlying socket and setting it to null.
+     */
     public void close() {
         try {
             this.socket.close();
