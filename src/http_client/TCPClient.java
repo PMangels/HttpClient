@@ -31,6 +31,7 @@
 
         /**
          * Send an HTTP request to the provided server and process its response.
+         * 30x redirects will be followed.
          * @param args "HTTPCommand URI Port"
          *             Supported HTTP commands are GET, POST, HEAD and PUT.
          *             PUT and POST requests will ask for body contents.
@@ -100,6 +101,7 @@
          * @throws IllegalHeaderException A response with a malformed header was retrieved.
          */
         private static void handleHtmlPage(Response result) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
+            // Get embedded objects
             Document parsedHtml = Jsoup.parse(result.getContent());
             Elements elements = parsedHtml.getElementsByAttribute("src");
             Elements cssStyleSheets = parsedHtml.getElementsByAttributeValue("rel", "stylesheet");
@@ -109,6 +111,7 @@
                 fetchElement(element);
             }
 
+            // Set the content to the document with updated local urls.
             result.setContent(parsedHtml.toString(), result.getHeader("content-type"));
 
             try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(absolutePath + "webpage.html"))) {
@@ -152,6 +155,7 @@
          * @throws IllegalHeaderException The returned response contained a malformed HTTP header.
          */
         private static void fetchElement(Element element) throws URISyntaxException, IOException, IllegalResponseException, UnsupportedHTTPVersionException, IllegalHeaderException {
+            // Increase the counter for different filenames.
             resourceCounter++;
             URI uriElement;
             boolean href = element.attr("rel").equals("stylesheet");
@@ -161,6 +165,7 @@
                 uriElement = new URI(element.attr("src"));
             }
 
+            // Get a connection to this host and request the object.
             Request req = new Request(RequestType.GET, uriElement.getPath(), HTTPVersion.HTTP11);
             String host = uriElement.getHost();
             Connection connection = getConnection(host);
@@ -172,13 +177,14 @@
                 filename += "." + extension;
             File file = new File(absolutePath + filename);
 
-
             if (imageExtensions.contains(extension)){
                 writeImage(response.getContent(), file, extension);
             }
             else{
                 writeFile(response.getContent(), file);
             }
+
+            // Update the url in the HTML to the local url.
             if (href){
                 element.attr("href", filename);
             }else{
@@ -210,9 +216,9 @@
         }
 
         /**
-         *
-         * @param uriElement
-         * @return
+         * Get the extension of the file in this url.
+         * @param uriElement The url to the file of which the extension is requested.
+         * @return The extension of the file at the url. Or the empty string if it has no extension.
          */
         private static String parseExtension(URI uriElement) {
             return parseExtension(uriElement.getPath());
@@ -247,8 +253,10 @@
 
             int port = Integer.parseInt(args[2]);
 
+            // Create a connection to the provided host and add it to the list of connections
             TCPClient.connections.add(new Connection(uri.getHost(), port));
             if (type.equals(RequestType.POST)||type.equals(RequestType.PUT)){
+                // Request body input from user.
                 System.out.println("Enter file data here. Close with CRLF.CRLFCRLF:");
                 Scanner userInput = new Scanner(System.in);
                 String content = userInput.nextLine();

@@ -47,10 +47,12 @@ public class Connection {
         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
         DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         request.addHeader("Host", this.host + ":" + this.port);
+
         outputStream.writeBytes(request.toString());
 
         StringBuilder responseBuffer = new StringBuilder();
 
+        // See if our socket connection is still alive, otherwise create a new one and re-send the request.
         try{
             responseBuffer.append((char) inputStream.readByte());
         } catch (EOFException | SocketException e){
@@ -59,7 +61,10 @@ public class Connection {
             inputStream = new DataInputStream(socket.getInputStream());
             outputStream.writeBytes(request.toString());
         }
+
+        // Read all headers
         do {
+            // Remove all 100 Continue responses from the server.
             int index = responseBuffer.indexOf("\r\n\r\n");
             if (index != -1)
                 responseBuffer.delete(0, index);
@@ -74,6 +79,8 @@ public class Connection {
         int length = 0;
         boolean isImage = false;
         boolean chunked = false;
+
+        // Look for important headers: content-length, content-type and transfer-encoding.
         for (String line : responseBuffer.toString().split("\r\n")) {
             if (line.toLowerCase().startsWith("content-length:")) {
                 String[] lineParts = line.split(":");
@@ -95,8 +102,10 @@ public class Connection {
             }
         }
 
+        // Read the body
         byte[] bytes;
         if (chunked){
+            // Read the body using chunked tranfer encoding.
             bytes = parseBodyChunked(inputStream);
             do{
                 responseBuffer.insert(responseBuffer.length()-2,(char) inputStream.readByte());
@@ -106,6 +115,7 @@ public class Connection {
             bytes = parseBody(inputStream, length);
         }
 
+        // Convert the body contents to a string.
         String byteString;
         if (isImage){
             byteString = new String(getEncoder().encode(bytes),"UTF-8");
@@ -127,13 +137,19 @@ public class Connection {
     private byte[] parseBodyChunked(DataInputStream inputStream) throws IOException {
         int length = -1;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
         while (length != 0){
             StringBuilder responseBuffer = new StringBuilder();
+
+            // Read the first line of this chunk.
             while (!responseBuffer.toString().endsWith("\r\n")) {
                 responseBuffer.append((char) inputStream.readByte());
             }
+            // Find the length of this chunk.
             String[] firstline = responseBuffer.toString().split(";");
             length = Integer.parseInt(firstline[0].replace("\r\n",""), 16);
+
+            // Read the contents of this chunk.
             buffer.write(parseBody(inputStream, length));
             if (length!=0) {
                 inputStream.readByte();
