@@ -52,7 +52,7 @@
                     directory.mkdir();
                 }
 
-                if (303 == result.getStatusCode()){
+                if (301 == result.getStatusCode()   || 302 == result.getStatusCode() || 303 == result.getStatusCode()){
                     result = handleRedirect(request,result);
                 }
                 if (request.getType() != RequestType.HEAD) {
@@ -82,11 +82,12 @@
          * @throws UnsupportedHTTPVersionException The received response uses an HTTP version not supported by this client.
          * @throws IOException An IOException occured while communicating to the server.
          */
-        private static Response handleRedirect(Request request, Response result) throws IllegalHeaderException, IllegalResponseException, UnsupportedHTTPVersionException, IOException {
-            String newLocation = result.getHeader("location");
-            System.out.println("Redirecting to "+newLocation);
-            Request newRequest = new Request(request.getType(),newLocation,request.getVersion());
-            return connections.get(0).sendRequest(newRequest);
+        private static Response handleRedirect(Request request, Response result) throws IllegalHeaderException, IllegalResponseException, UnsupportedHTTPVersionException, IOException, URISyntaxException {
+            URI uri = new URI(result.getHeader("location"));
+            Connection connection = getConnection(uri.getHost());
+            System.out.println("Redirecting to "+uri.toString());
+            Request newRequest = new Request(request.getType(),uri.getPath(),request.getVersion());
+            return connection.sendRequest(newRequest);
         }
 
         /**
